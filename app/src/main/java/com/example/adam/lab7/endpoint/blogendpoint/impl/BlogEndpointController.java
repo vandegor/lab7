@@ -6,7 +6,6 @@ import com.example.adam.lab7.model.json.Entry;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import java.util.Date;
 import java.util.List;
 
 import retrofit2.Call;
@@ -17,14 +16,18 @@ public class BlogEndpointController {
     private Gson gson;
     private Retrofit retrofit;
     private BlogEndpoint blogEndpoint;
+    private String defaultUri;
 
-    public void start(String url) {
-        String defaultURL = "http://192.168.43.228:8080/lab/rest/";
+    public BlogEndpointController(String defaultUri) {
+        this.defaultUri = defaultUri;
+    }
+
+    public void start(String uri) throws IllegalArgumentException {
         gson = new GsonBuilder()
                 .setLenient()
                 .create();
         retrofit = new Retrofit.Builder()
-                .baseUrl(url == null || url.equals("") ? defaultURL : url)
+                .baseUrl(uri == null || uri.equals("") ? defaultUri : uri)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
         blogEndpoint = retrofit.create(BlogEndpoint.class);

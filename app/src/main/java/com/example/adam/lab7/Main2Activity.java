@@ -1,5 +1,6 @@
 package com.example.adam.lab7;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.support.design.widget.TabLayout;
@@ -34,6 +35,8 @@ public class Main2Activity extends AppCompatActivity {
 
     private static final Map<Integer, String> tabTitleMap;
 
+    private static String uri;
+
     static {
         Map<Integer, String> aMap = new HashMap<>();
         aMap.put(0, "postEntry");
@@ -49,9 +52,16 @@ public class Main2Activity extends AppCompatActivity {
     }
 
     private SectionsPagerAdapter mSectionsPagerAdapter;
-
     private ViewPager mViewPager;
     private int currentPage;
+
+    public static String getUri() {
+        return uri;
+    }
+
+    public static void setUri(String uri) {
+        Main2Activity.uri = uri;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,11 +94,11 @@ public class Main2Activity extends AppCompatActivity {
 
     }
 
-    public void onSubmit(View view) {
+    public void onSubmit(final View view) {
+        final int currentItem = mViewPager.getCurrentItem();
         try {
-            BlogEndpointController blogEndpointController = new BlogEndpointController();
-            blogEndpointController.start(null);
-            final int currentItem = mViewPager.getCurrentItem();
+            BlogEndpointController blogEndpointController = new BlogEndpointController(getResources().getString(R.string.defaultURL));
+            blogEndpointController.start(getUri());
             Fragment fragment = mSectionsPagerAdapter.getItem(currentItem);
             EditText entryIdValue = (EditText) mViewPager.getFocusedChild().findViewById(R.id.entryIdValue);
             EditText commentIdValue = (EditText) mViewPager.getFocusedChild().findViewById(R.id.commentIdValue);
@@ -103,25 +113,41 @@ public class Main2Activity extends AppCompatActivity {
                     call.enqueue(new Callback() {
                         @Override
                         public void onResponse(Call call, Response response) {
-                            response.body();
+                            int code = response.code();
+                            String message = response.message();
+                            Object body = response.body();
+
                             Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                            String jsonObject = gson.toJson(response.body());
-                            responseBodyValue.getText().clear();
-                            responseBodyValue.getText().append(jsonObject);
+                            if (body != null) {
+                                String jsonObject;
+                                jsonObject = gson.toJson(body);
+                                responseBodyValue.getText().clear();
+                                responseBodyValue.getText().append(jsonObject);
+                            } else {
+                                Snackbar.make(view, "code: " + code + " message: " + message, Snackbar.LENGTH_LONG)
+                                        .setAction("Action", null).show();
+                            }
+
                         }
 
                         @Override
                         public void onFailure(Call call, Throwable t) {
-                            android.util.Log.e("Failed to " + tabTitleMap.get(currentItem), t.getMessage(),t);
+                            String error = "Failed to " + tabTitleMap.get(currentItem) + " Cause: " + t.getMessage();
+                            Snackbar.make(view, error, Snackbar.LENGTH_LONG)
+                                    .setAction("Action", null).show();
+                            android.util.Log.e(error, t.getMessage(), t);
                         }
                     });
                     break;
                 }
             }
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
+
+        } catch (InvocationTargetException | IllegalArgumentException | IllegalAccessException e) {
+            String error = "Failed to " + tabTitleMap.get(currentItem) + " Cause: " + e.getMessage();
+            android.util.Log.e(error, e.getMessage(), e);
+            Snackbar.make(view, error, Snackbar.LENGTH_LONG)
+                    .setAction("Action", null).show();
+
         }
     }
 
@@ -137,6 +163,8 @@ public class Main2Activity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         if (id == R.id.action_settings) {
+            Intent intent = new Intent(this, MainActivity.class);
+            startActivity(intent);
             return true;
         }
         return super.onOptionsItemSelected(item);
